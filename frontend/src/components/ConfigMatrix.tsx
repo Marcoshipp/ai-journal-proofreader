@@ -36,11 +36,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import {
     Save,
@@ -61,7 +56,6 @@ import {
     updateRule,
     createCheckSection,
     type Config,
-    type Journal,
     type ArticleType,
     type CheckSection,
     type Rule,
