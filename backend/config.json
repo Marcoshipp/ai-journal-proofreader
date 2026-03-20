@@ -1,0 +1,247 @@
+{
+    "check_sections": [
+        {
+            "key": "aq",
+            "display_name": "AQ",
+            "general_description": "是否有未處理的AQ"
+        },
+        {
+            "key": "title",
+            "display_name": "篇名格式",
+            "general_description": "1. Title Case\n2. 括號及介係詞小寫\n3. dash後第一個字母為大寫\n4. 冒號後第一個字母為大寫"
+        },
+        {
+            "key": "authors",
+            "display_name": "作者名格式",
+            "general_description": "1. 須有全名\n2. 首字母大寫\n3. 先名再姓（First Name + Last Name）\n4. 通訊作者查核"
+        },
+        {
+            "key": "abstract",
+            "display_name": "摘要格式-大標",
+            "general_description": "Background, Objectives, Materials and Methods, Results, Conclusions",
+            "params_schema": [
+                {
+                    "key": "required_sections",
+                    "label": "Required abstract section headers",
+                    "type": "string_list",
+                    "hint": "One header per line, e.g. \"Background:\""
+                }
+            ]
+        },
+        {
+            "key": "keywords",
+            "display_name": "Keywords 內容",
+            "general_description": "每一個Keywords須按字母順序排列，首字母大寫或特殊名詞首字母大寫（大小寫請人工確認）"
+        },
+        {
+            "key": "date_format",
+            "display_name": "日期格式",
+            "general_description": "須包含 Received、Revised、Accepted、Published 四個日期",
+            "params_schema": [
+                {
+                    "key": "required_dates",
+                    "label": "Required date labels",
+                    "type": "string_list",
+                    "hint": "One label per line, exactly as it appears in the paper (e.g. Received, Submitted)"
+                }
+            ]
+        },
+        {
+            "key": "online_access",
+            "display_name": "Access this article online",
+            "general_description": "1. QR CODE是空的\n2. 期刊網址為 Website: https://journals.lww.com/fjmd\n3. DOI不為空",
+            "params_schema": [
+                {
+                    "key": "expected_url",
+                    "label": "Expected Website URL",
+                    "type": "url",
+                    "hint": "e.g. journals.lww.com/fjmd"
+                }
+            ]
+        },
+        {
+            "key": "htcta",
+            "display_name": "How to cite this article",
+            "general_description": "格式：作者. 標題. 期刊縮寫 年份;卷期:頁數.\n標題須為Sentence Case，冒號後首字大寫，最多列出六位作者"
+        },
+        {
+            "key": "subheadings",
+            "display_name": "內文大標",
+            "general_description": "Introductions, Materials and Methods, Results, Discussion, Conclusions",
+            "params_schema": [
+                {
+                    "key": "expected_headings",
+                    "label": "Expected body headings",
+                    "type": "string_list",
+                    "hint": "One heading per line, e.g. \"Materials and Methods\""
+                }
+            ]
+        },
+        {
+            "key": "coi",
+            "display_name": "Conflict(s) of Interest",
+            "general_description": "1. 順序正確：「Financial support and sponsorship」須在「Conflicts of interest」前\n2. 檢查文章每位作者是否為編委會成員\n3. 若是編委，則COI須聲明並提及該作者\n4. 若聲明「no conflicts of interest」則確認無編委衝突",
+            "params_schema": [
+                {
+                    "key": "board_url",
+                    "label": "Editorial Board URL",
+                    "type": "url",
+                    "hint": "URL of the journal's editorial board page"
+                }
+            ]
+        },
+        {
+            "key": "irb",
+            "display_name": "IRB & Patient Consent",
+            "general_description": "檢查「Materials and Methods」中IRB核准及病人同意相關資訊"
+        },
+        {
+            "key": "section_order",
+            "display_name": "段落順序檢查",
+            "general_description": "Acknowledgments → Author contributions → Data availability statement → Financial support and sponsorship 必須依序出現"
+        },
+        {
+            "key": "acknowledgments",
+            "display_name": "Acknowledgments",
+            "general_description": "1. 此項非必要提供，若文章有提供才檢查\n2. 不能出現作者群的名字\n3. 若有財務經費聲明，需移至Financial support and sponsorship"
+        },
+        {
+            "key": "author_contributions",
+            "display_name": "Author Contributions",
+            "general_description": "1. 需附上聲明\n2. 最後一句必須包含規定字句",
+            "params_schema": [
+                {
+                    "key": "required_statement",
+                    "label": "Required final statement",
+                    "type": "string_list",
+                    "hint": "The agreement sentence that must appear at the end of the section"
+                }
+            ]
+        },
+        {
+            "key": "data_availability",
+            "display_name": "Data Availability Statement",
+            "general_description": "1. 需附上聲明"
+        },
+        {
+            "key": "financial_support",
+            "display_name": "Financial Support and Sponsorship",
+            "general_description": "1. 需附上聲明\n→若有，須附上資助機構名稱及編號\n→若無，則寫 \"Nil.\""
+        }
+    ],
+    "default_rules": {
+        "abstract": {
+            "type": "general",
+            "params": {
+                "required_sections": [
+                    "Background:",
+                    "Objectives:",
+                    "Materials and Methods:",
+                    "Results:",
+                    "Conclusions:"
+                ]
+            }
+        },
+        "subheadings": {
+            "type": "general",
+            "params": {
+                "expected_headings": [
+                    "Introduction",
+                    "Materials and Methods",
+                    "Results",
+                    "Discussion",
+                    "Conclusions"
+                ]
+            }
+        },
+        "coi": {
+            "type": "general",
+            "params": {
+                "board_url": "https://journals.lww.com/FJMD/pages/editorialboard.aspx"
+            }
+        },
+        "date_format": {
+            "type": "general",
+            "params": {
+                "required_dates": [
+                    "Received",
+                    "Revised",
+                    "Accepted",
+                    "Published"
+                ]
+            }
+        },
+        "online_access": {
+            "type": "general",
+            "params": {
+                "expected_url": "journals.lww.com/fjmd"
+            }
+        },
+        "author_contributions": {
+            "type": "general",
+            "params": {
+                "required_statement": "all authors have read and agreed to the final version of the manuscript"
+            }
+        }
+    },
+    "journals": [
+        {
+            "id": "formosan-jmed",
+            "name": "Formosan Journal of Medicine",
+            "article_types": [
+                {
+                    "id": "original-article",
+                    "name": "Original Article",
+                    "rules": {}
+                },
+                {
+                    "id": "07cbf580",
+                    "name": "Case Report",
+                    "rules": {
+                        "abstract": {
+                            "enabled": false
+                        },
+                        "subheadings": {
+                            "params": {
+                                "expected_headings": [
+                                    "Introduction",
+                                    "Case Report",
+                                    "Discussion",
+                                    "Conclusions"
+                                ]
+                            }
+                        },
+                        "title": {
+                            "type": "custom",
+                            "instruction": "1. Title Case\n2. 括號及介係詞小寫\n3. dash後第一個字母為大寫\n4. 冒號後第一個字母為大寫\n5. 要有寫“case”或“case report”",
+                            "params": {
+                                "context_fields": [
+                                    "titleName"
+                                ]
+                            }
+                        },
+                        "keywords": {
+                            "type": "custom",
+                            "instruction": "1. 每一個 Keyword 須按字母順序排列，第一個 keyword 首字母大寫或特殊名詞的首字母大寫\n2. Keywords 須包含 \"case report\"",
+                            "params": {
+                                "context_fields": [
+                                    "keywords"
+                                ]
+                            }
+                        }
+                    }
+                },
+                {
+                    "id": "21b7a015",
+                    "name": "Review Article",
+                    "rules": {
+                        "irb": {
+                            "type": "general",
+                            "enabled": true
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}
