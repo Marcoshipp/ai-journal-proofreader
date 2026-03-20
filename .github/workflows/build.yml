@@ -91,18 +91,24 @@ jobs:
               run: chmod +x backend-dist/linux/backend
 
             - name: Install root dependencies (Electron + electron-builder)
-              run: npm install
+              run: pnpm install
 
             - name: Build React frontend
-              run: npm run build:frontend
+              run: pnpm run build:frontend
 
             - name: Build Linux packages (AppImage + deb)
-              run: npx electron-builder --linux
+              run: pnpm exec electron-builder --linux
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+            - name: Install Wine for Windows cross-compile
+              run: |
+                  sudo dpkg --add-architecture i386
+                  sudo apt-get update
+                  sudo apt-get install -y wine64 wine32:i386
+
             - name: Build Windows installer (cross-compile via Wine)
-              run: npx electron-builder --win
+              run: pnpm exec electron-builder --win
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
