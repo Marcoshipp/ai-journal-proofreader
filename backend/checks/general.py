@@ -620,11 +620,11 @@ def check_keywords(metadata: Dict[str, Any]) -> ValidationResult:
     messages.append(f"[INFO] {len(keywords)} keyword(s) found: {keywords}")
 
     # Check alphabetical order (case-insensitive)
-    lowered = [k.lower() for k in keywords]
-    if lowered != sorted(lowered):
+    first_letters = [k.strip()[0].lower() for k in keywords if k.strip()]
+    if first_letters != sorted(first_letters):
         messages.append(
             f"[FAILURE] Keywords are not in alphabetical order. "
-            f"Expected order: {sorted(keywords, key=str.lower)}"
+            f"Expected order: {sorted(keywords, key=lambda k: k.strip()[0].lower())}"
         )
         has_error = True
     else:
@@ -788,6 +788,13 @@ def check_htcta(metadata: Dict[str, Any]) -> ValidationResult:
     # We use a non-greedy match for each section separated by ". "        #
     # ------------------------------------------------------------------ #
     normalised = htcta.replace("\u2011", "-")  # normalise non-breaking hyphens
+
+    # Strip common prefixes like "How to cite this article:" that some
+    # PDFs prepend to the HTCTA field before the actual citation content.
+    # Only strip if the prefix looks like a label (no period before the colon).
+    prefix_match = re.match(r"^([^.]{0,60}):\s*", normalised)
+    if prefix_match:
+        normalised = normalised[prefix_match.end():]
 
     pattern = re.compile(
         r"^"

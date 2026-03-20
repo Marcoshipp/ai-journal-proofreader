@@ -35,13 +35,6 @@
                 "filter": [
                     "**/*"
                 ]
-            },
-            {
-                "from": "backend-dist/${os}/browsers",
-                "to": "backend/browsers",
-                "filter": [
-                    "**/*"
-                ]
             }
         ],
         "linux": {
