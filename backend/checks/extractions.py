@@ -79,7 +79,7 @@ def pdf_to_markdown(pdf_path: str, md_name: str):
     cleaned_list = clean_markdown_lines(lines)
 
     md_cleaned = "\n".join(cleaned_list)
-    with open(md_name, "w") as md:
+    with open(md_name, "w", encoding="utf-8") as md:
         md.write(md_cleaned)
 
 

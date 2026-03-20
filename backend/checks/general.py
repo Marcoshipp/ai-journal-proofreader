@@ -380,7 +380,7 @@ def print_report(results: List[ValidationResult], output_format: str = "text"):
                 lines.append(f"- {msg}")
             lines.append("")  # Add empty line between checks
         
-        with open("report.md", "w") as f:
+        with open("report.md", "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
         print("Report saved to report.md")
     else:
