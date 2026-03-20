@@ -113,7 +113,7 @@ def populate_subheadings_to_metadata(json_path: str, md_path: str) -> None:
         json.dump(metadata, json_file, indent=4)
 
 
-def generate_metadata_json(pdf_path: str, output_path: str = None) -> Dict[str, Any]:
+def generate_metadata_json(pdf_path: str, output_path: str = None, api_key: str = None) -> Dict[str, Any]:
     """Upload a PDF to Gemini and extract structured metadata as JSON.
 
     Uses JSON_PROMPT_TEMPLATE to instruct Gemini to analyse the visual layout
@@ -124,6 +124,7 @@ def generate_metadata_json(pdf_path: str, output_path: str = None) -> Dict[str, 
         pdf_path: Path to the PDF file.
         output_path: Where to save the JSON. Defaults to
                      ``<pdf_basename>_metadata.json``.
+        api_key: Optional Gemini API Key.
 
     Returns:
         Parsed metadata dict.
@@ -135,7 +136,10 @@ def generate_metadata_json(pdf_path: str, output_path: str = None) -> Dict[str, 
     if output_path is None:
         output_path = path.stem + "_metadata.json"
 
-    client = genai.Client()
+    if api_key:
+        client = genai.Client(api_key=api_key)
+    else:
+        client = genai.Client()
 
     # Upload the PDF via the Files API so Gemini can inspect its layout
     uploaded_file = client.files.upload(file=pdf_path)

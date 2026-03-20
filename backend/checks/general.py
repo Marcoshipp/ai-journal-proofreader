@@ -431,11 +431,18 @@ def get_text_from_heading(md_name: str, heading: str) -> str:
         return ""
 
 
-def check_irb_and_pc(md_name: str) -> ValidationResult:
+def check_irb_and_pc(md_name: str, params: Dict[str, Any] = None) -> ValidationResult:
+    params = params or {}
+    api_key = params.get("_api_key")
+    
     assert md_name, "Markdown filename is empty"
     text = get_text_from_heading(md_name, "## **Materials and Methods**")
 
-    client = genai.Client()
+    if api_key:
+        client = genai.Client(api_key=api_key)
+    else:
+        client = genai.Client()
+        
     prompt = IRB_PROMPT_TEMPLATE.format(manuscript_text=text)
 
     response = client.models.generate_content(

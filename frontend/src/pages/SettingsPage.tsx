@@ -29,9 +29,24 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Settings, ArrowLeft, Plus, Trash2 } from "lucide-react";
+import {
+    Settings,
+    ArrowLeft,
+    Plus,
+    Trash2,
+    Eye,
+    EyeOff,
+    Save,
+} from "lucide-react";
 import { Link } from "react-router-dom";
-import { fetchJournals, createJournal, deleteJournal, type Journal } from "@/lib/api";
+import {
+    fetchJournals,
+    createJournal,
+    deleteJournal,
+    type Journal,
+    fetchGlobalSettings,
+    updateGlobalSettings,
+} from "@/lib/api";
 
 export default function SettingsPage() {
     const [journals, setJournals] = useState<Journal[]>([]);
@@ -43,6 +58,11 @@ export default function SettingsPage() {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [creating, setCreating] = useState(false);
     const [deleting, setDeleting] = useState(false);
+
+    // Global Settings
+    const [apiKey, setApiKey] = useState("");
+    const [isApiKeyVisible, setIsApiKeyVisible] = useState(false);
+    const [savingApiKey, setSavingApiKey] = useState(false);
 
     const activeJournal = journals.find((j) => j.id === activeJournalId);
 
@@ -70,7 +90,20 @@ export default function SettingsPage() {
                 setLoading(false);
             }
         };
+
+        const loadGlobalSettings = async () => {
+            try {
+                const settings = await fetchGlobalSettings();
+                if (settings && settings.api_key) {
+                    setApiKey(settings.api_key);
+                }
+            } catch (err) {
+                console.error("Failed to load global settings:", err);
+            }
+        };
+
         loadJournals();
+        loadGlobalSettings();
     }, []);
 
     const handleCreateJournal = async () => {
@@ -104,7 +137,9 @@ export default function SettingsPage() {
             setJournals(remaining);
             if (remaining.length > 0) {
                 setActiveJournalId(remaining[0].id);
-                setActiveArticleTypeId(remaining[0].article_types?.[0]?.id ?? "");
+                setActiveArticleTypeId(
+                    remaining[0].article_types?.[0]?.id ?? "",
+                );
             } else {
                 setActiveJournalId("");
                 setActiveArticleTypeId("");
@@ -139,6 +174,22 @@ export default function SettingsPage() {
         }
     }, [activeJournalId, journals]);
 
+    {
+        /* Main Content */
+    }
+    const handleSaveApiKey = async () => {
+        setSavingApiKey(true);
+        try {
+            await updateGlobalSettings({ api_key: apiKey.trim() });
+            toast.success("系統設定已儲存");
+        } catch (err) {
+            console.error("Failed to save API key:", err);
+            toast.error("儲存失敗，請重試");
+        } finally {
+            setSavingApiKey(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-background">
             {/* Header */}
@@ -165,7 +216,66 @@ export default function SettingsPage() {
 
             {/* Main Content */}
             <main className="max-w-6xl mx-auto px-6 py-8">
-                <div className="space-y-6">
+                <div className="space-y-8">
+                    {/* Global Settings Section */}
+                    <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden p-6 space-y-4">
+                        <div>
+                            <h2 className="text-xl font-bold tracking-tight">
+                                系統設定
+                            </h2>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                設定環境變數與 AI 的 API 資訊
+                            </p>
+                        </div>
+                        <div className="grid gap-2 max-w-xl">
+                            <label className="text-sm font-medium">
+                                Gemini API Key
+                            </label>
+                            <div className="flex gap-2">
+                                <div className="relative flex-1">
+                                    <Input
+                                        type={
+                                            isApiKeyVisible
+                                                ? "text"
+                                                : "password"
+                                        }
+                                        placeholder="輸入 Google Gemini API Key"
+                                        value={apiKey}
+                                        onChange={(e) =>
+                                            setApiKey(e.target.value)
+                                        }
+                                        className="pr-10 font-mono text-sm"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute right-0 top-0 h-full w-10 text-muted-foreground hover:text-foreground"
+                                        onClick={() =>
+                                            setIsApiKeyVisible(!isApiKeyVisible)
+                                        }
+                                    >
+                                        {isApiKeyVisible ? (
+                                            <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                            <Eye className="h-4 w-4" />
+                                        )}
+                                    </Button>
+                                </div>
+                                <Button
+                                    onClick={handleSaveApiKey}
+                                    disabled={savingApiKey}
+                                    className="gap-2 min-w-[100px]"
+                                >
+                                    <Save className="h-4 w-4" />
+                                    {savingApiKey ? "儲存中" : "儲存設定"}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <Separator className="bg-border/40" />
+
                     <div className="flex items-center justify-between ">
                         <div>
                             <h2 className="text-xl font-bold tracking-tight">
@@ -281,16 +391,22 @@ export default function SettingsPage() {
             </Dialog>
 
             {/* Delete Journal Alert Dialog */}
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialog
+                open={isDeleteDialogOpen}
+                onOpenChange={setIsDeleteDialogOpen}
+            >
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>確定要刪除期刊嗎？</AlertDialogTitle>
                         <AlertDialogDescription>
-                            這將會永久刪除「{activeJournal?.name ?? "此期刊"}」以及其底下的所有文章類型與檢查設定，此操作無法復原。
+                            這將會永久刪除「{activeJournal?.name ?? "此期刊"}
+                            」以及其底下的所有文章類型與檢查設定，此操作無法復原。
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={deleting}>取消</AlertDialogCancel>
+                        <AlertDialogCancel disabled={deleting}>
+                            取消
+                        </AlertDialogCancel>
                         <Button
                             variant="destructive"
                             onClick={handleDeleteJournal}

@@ -31,6 +31,28 @@ class CheckSectionCreate(BaseModel):
     target_article_type_id: str
 
 
+class GlobalSettingsUpdate(BaseModel):
+    api_key: Optional[str] = None
+
+
+# ── Global Settings ───────────────────────────────────────────────
+
+@router.get("/settings")
+def get_global_settings():
+    config = load_config()
+    return config.get("global_settings", {"api_key": ""})
+
+
+@router.put("/settings")
+def update_global_settings(body: GlobalSettingsUpdate):
+    config = load_config()
+    if "global_settings" not in config:
+        config["global_settings"] = {}
+    config["global_settings"]["api_key"] = body.api_key
+    save_config(config)
+    return {"ok": True, "message": "Settings updated"}
+
+
 # ── Journals ──────────────────────────────────────────────────────
 
 @router.get("/journals")

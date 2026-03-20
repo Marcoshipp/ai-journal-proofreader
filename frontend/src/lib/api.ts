@@ -46,6 +46,25 @@ export async function fetchConfig(): Promise<Config> {
     return res.json();
 }
 
+export interface GlobalSettings {
+    api_key: string;
+}
+
+export async function fetchGlobalSettings(): Promise<GlobalSettings> {
+    const res = await fetch(`${API_BASE}/config/settings`);
+    if (!res.ok) throw new Error("Failed to fetch settings");
+    return res.json();
+}
+
+export async function updateGlobalSettings(payload: { api_key?: string }): Promise<void> {
+    const res = await fetch(`${API_BASE}/config/settings`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error("Failed to update settings");
+}
+
 export async function fetchJournals(): Promise<Journal[]> {
     const res = await fetch(`${API_BASE}/config/journals`);
     if (!res.ok) throw new Error("Failed to fetch journals");

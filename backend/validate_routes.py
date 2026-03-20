@@ -122,6 +122,7 @@ def run_llm_check(
     metadata: Dict[str, Any],
     md_path: str,
     effective_rules: Dict[str, Any],
+    api_key: str = None,
 ) -> ValidationResult:
     """Run a custom LLM check using a supervisor-defined instruction.
 
@@ -169,7 +170,10 @@ REASON: one-sentence explanation
 """
 
     try:
-        client = genai.Client()
+        if api_key:
+            client = genai.Client(api_key=api_key)
+        else:
+            client = genai.Client()
         response = client.models.generate_content(
             model="gemini-flash-lite-latest",
             contents=prompt,
@@ -222,6 +226,9 @@ async def _process_pdf(job_id: str):
     job = _jobs[job_id]
 
     try:
+        config = load_config()
+        api_key = config.get("global_settings", {}).get("api_key")
+
         work_dir = job["work_dir"]
         pdf_path = job["pdf_path"]
         md_path = os.path.join(work_dir, "article.md")
@@ -229,7 +236,7 @@ async def _process_pdf(job_id: str):
 
         # Step 1: Extract metadata from PDF via Gemini
         job["steps"].append({"key": "extracting_metadata", "status": "running", "label": "Extracting metadata from PDF..."})
-        metadata = await asyncio.to_thread(generate_metadata_json, pdf_path, json_path)
+        metadata = await asyncio.to_thread(generate_metadata_json, pdf_path, json_path, api_key)
         job["steps"][-1]["status"] = "done"
 
         # Step 2: Convert PDF to markdown
@@ -247,7 +254,6 @@ async def _process_pdf(job_id: str):
 
         # Step 4: Determine which checks to run
         # Find journal and article type rules
-        config = load_config()
         journal_id = job.get("journal_id")
         article_type_id = job.get("article_type_id")
         
@@ -295,6 +301,9 @@ async def _process_pdf(job_id: str):
                 job["steps"][-1]["result"] = skipped_result.to_dict()
                 continue
 
+            if api_key:
+                params["_api_key"] = api_key
+
             if rule_type == "general":
                 result = await asyncio.to_thread(
                     _run_builtin_check, key, metadata, md_path, params
@@ -304,7 +313,7 @@ async def _process_pdf(job_id: str):
                 context_fields = params.get("context_fields", list(metadata.keys())[:5])
                 result = await asyncio.to_thread(
                     run_llm_check,
-                    display, instruction, context_fields, metadata, md_path, effective_rules
+                    display, instruction, context_fields, metadata, md_path, effective_rules, api_key
                 )
             else:
                 result = ValidationResult(
