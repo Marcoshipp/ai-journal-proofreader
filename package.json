@@ -9,7 +9,6 @@
         "build:app": "electron-builder",
         "build:all": "pnpm run build:frontend && pnpm run build:app"
     },
-    "packageManager": "pnpm@9.0.0",
     "devDependencies": {
         "electron": "^31.0.0",
         "electron-builder": "^24.0.0"
