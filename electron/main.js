@@ -36,9 +36,16 @@ function startBackend() {
             app.quit();
             return;
         }
+        // Tell Playwright where to find the bundled Chromium
+        const browsersPath = path.join(
+            process.resourcesPath,
+            "backend",
+            "browsers",
+        );
         backendProcess = spawn(backendExe, [], {
             cwd: path.dirname(backendExe),
             stdio: "ignore",
+            env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: browsersPath },
         });
     } else {
         // Dev mode – use uv run python main.py

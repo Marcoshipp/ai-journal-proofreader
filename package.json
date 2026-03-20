@@ -2,12 +2,16 @@
     "name": "ai-journal-proofreader",
     "version": "1.0.0",
     "description": "AI Journal Proofreader desktop app",
+    "author": {
+        "name": "Marco",
+        "email": "marcoomagbons@email.com"
+    },
     "main": "electron/main.js",
     "scripts": {
         "dev": "electron .",
         "build:frontend": "cd frontend && pnpm install && pnpm run build",
         "build:app": "electron-builder",
-        "build:all": "pnpm run build:frontend && pnpm run build:app"
+        "build:all": "npm run build:frontend && npm run build:app"
     },
     "devDependencies": {
         "electron": "^31.0.0",
@@ -28,6 +32,13 @@
             {
                 "from": "backend-dist/${os}",
                 "to": "backend",
+                "filter": [
+                    "**/*"
+                ]
+            },
+            {
+                "from": "backend-dist/${os}/browsers",
+                "to": "backend/browsers",
                 "filter": [
                     "**/*"
                 ]

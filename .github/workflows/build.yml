@@ -42,6 +42,12 @@ jobs:
               working-directory: backend
               run: uv run pyinstaller proofreader.spec --distpath ../backend-dist/${{ matrix.platform }}
 
+            - name: Download Playwright Chromium
+              working-directory: backend
+              run: uv run playwright install chromium
+              env:
+                  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/backend-dist/${{ matrix.platform }}/browsers
+
             - name: Upload backend artifact
               uses: actions/upload-artifact@v4
               with:
@@ -83,19 +89,19 @@ jobs:
             - name: Make Linux backend executable
               run: chmod +x backend-dist/linux/backend
 
-            - name: Install root dependencies
-              run: pnpm install
+            - name: Install root dependencies (Electron + electron-builder)
+              run: npm install
 
             - name: Build React frontend
-              run: pnpm run build:frontend
+              run: npm run build:frontend
 
             - name: Build Linux packages (AppImage + deb)
-              run: pnpm exec electron-builder --linux
+              run: npx electron-builder --linux
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Build Windows installer (cross-compile via Wine)
-              run: pnpm exec electron-builder --win
+              run: npx electron-builder --win
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

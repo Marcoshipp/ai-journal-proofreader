@@ -12,7 +12,7 @@ datas = []
 binaries = []
 hiddenimports = []
 
-for pkg in ["fastapi", "uvicorn", "starlette", "anyio", "httptools", "websockets"]:
+for pkg in ["fastapi", "uvicorn", "starlette", "anyio", "httptools", "websockets", "playwright"]:
     d, b, h = collect_all(pkg)
     datas    += d
     binaries += b
@@ -43,6 +43,8 @@ a = Analysis(
         "uvicorn.protocols.websockets.auto",
         "uvicorn.lifespan",
         "uvicorn.lifespan.on",
+        "playwright.sync_api",
+        "playwright.async_api",
     ],
     hookspath=[],
     hooksconfig={},
