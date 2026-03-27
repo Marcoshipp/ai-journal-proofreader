@@ -62,14 +62,11 @@
                         "x64"
                     ]
                 }
-            ],
-            "icon": "build/icon.ico"
+            ]
         },
         "nsis": {
             "oneClick": false,
-            "allowToChangeInstallationDirectory": true,
-            "installerIcon": "build/icon.ico",
-            "uninstallerIcon": "build/icon.ico"
+            "allowToChangeInstallationDirectory": true
         }
     }
 }
