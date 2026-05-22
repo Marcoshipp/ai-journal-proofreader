@@ -434,9 +434,13 @@ def get_text_from_heading(md_name: str, heading: str) -> str:
 def check_irb_and_pc(md_name: str, params: Dict[str, Any] = None) -> ValidationResult:
     params = params or {}
     api_key = params.get("_api_key")
-    
+
+    # Allow per-journal override; default to "Materials and Methods"
+    section_heading = params.get("section_heading", "Materials and Methods")
+    heading_md = f"## **{section_heading}**"
+
     assert md_name, "Markdown filename is empty"
-    text = get_text_from_heading(md_name, "## **Materials and Methods**")
+    text = get_text_from_heading(md_name, heading_md)
 
     if api_key:
         client = genai.Client(api_key=api_key)
@@ -631,6 +635,7 @@ def check_keywords(metadata: Dict[str, Any]) -> ValidationResult:
         messages.append("[OK] Keywords are in alphabetical order.")
 
     # Check for duplicates
+    lowered = [k.strip().lower() for k in keywords if k.strip()]
     seen = set()
     duplicate_pass = True
     for kw in lowered:

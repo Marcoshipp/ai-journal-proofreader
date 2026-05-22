@@ -366,7 +366,7 @@ async def validate_pdf(
     # Save uploaded file to UPLOADS_DIR
     pdf_path = UPLOADS_DIR / f"{job_id}.pdf"
     content = await file.read()
-    with open(pdf_path, "wb", encoding="utf-8") as f:
+    with open(pdf_path, "wb") as f:
         f.write(content)
 
     _jobs[job_id] = {

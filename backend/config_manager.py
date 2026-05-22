@@ -1,21 +1,36 @@
 import json
+import threading
 from pathlib import Path
 
 CONFIG_PATH = Path(__file__).parent / "config.json"
 
+# Module-level lock: all reads and writes must hold this to prevent
+# race conditions from FastAPI's threadpool executing sync handlers
+# concurrently (even with a single uvicorn worker).
+_lock = threading.Lock()
+
 
 def load_config() -> dict:
     """Load config from JSON file."""
-    if not CONFIG_PATH.exists():
-        return {"check_sections": [], "journals": []}
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+    with _lock:
+        if not CONFIG_PATH.exists():
+            return {"check_sections": [], "journals": []}
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
 
 
 def save_config(config: dict) -> None:
-    """Save config to JSON file."""
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-        json.dump(config, f, indent=4, ensure_ascii=False)
+    """Save config to JSON file.
+
+    Uses a write-to-temp-then-atomic-rename pattern so that:
+    - Readers never see a truncated or partially-written file.
+    - A crash mid-write leaves the original file intact.
+    """
+    with _lock:
+        tmp = CONFIG_PATH.with_suffix(".tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=4, ensure_ascii=False)
+        tmp.replace(CONFIG_PATH)  # atomic on Linux (POSIX rename syscall)
 
 
 # ── Check section registry ───────────────────────────────────────

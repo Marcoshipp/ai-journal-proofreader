@@ -299,31 +299,30 @@ export function ConfigMatrix({
         if (!activeJournal || !activeArticleType) return;
         setSaving(true);
         try {
-            const promises: Promise<Rule>[] = [];
-
             const original = activeArticleType.rules || {};
             const current = draftRules[activeArticleTypeId] || {};
             const keys = new Set([
                 ...Object.keys(original),
                 ...Object.keys(current),
             ]);
+
+            // Sequential saves: each request must fully commit before the next
+            // one reads config.json, otherwise concurrent reads of the same
+            // stale snapshot cause later writes to silently drop earlier ones.
             for (const key of keys) {
                 if (
                     JSON.stringify(original[key]) !==
                     JSON.stringify(current[key])
                 ) {
-                    promises.push(
-                        updateRule(
-                            activeJournalId,
-                            activeArticleTypeId,
-                            key,
-                            current[key],
-                        ),
+                    await updateRule(
+                        activeJournalId,
+                        activeArticleTypeId,
+                        key,
+                        current[key],
                     );
                 }
             }
 
-            await Promise.all(promises);
             toast.success("已儲存變更");
             await reload();
         } catch (err) {

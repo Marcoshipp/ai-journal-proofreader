@@ -93,7 +93,15 @@
         {
             "key": "irb",
             "display_name": "IRB & Patient Consent",
-            "general_description": "檢查「Materials and Methods」中IRB核准及病人同意相關資訊"
+            "general_description": "檢查指定段落中IRB核准及病人同意相關資訊（預設為「Materials and Methods」）",
+            "params_schema": [
+                {
+                    "key": "section_heading",
+                    "label": "Section heading to search",
+                    "type": "string",
+                    "hint": "e.g. Materials and Methods, Methods, Patients and Methods"
+                }
+            ]
         },
         {
             "key": "section_order",
@@ -199,7 +207,17 @@
                     "name": "Case Report",
                     "rules": {
                         "abstract": {
-                            "enabled": false
+                            "type": "general",
+                            "enabled": true,
+                            "params": {
+                                "required_sections": [
+                                    "Background:",
+                                    "Case Report:",
+                                    "Materials and Methods:",
+                                    "Results:",
+                                    "Conclusions:"
+                                ]
+                            }
                         },
                         "subheadings": {
                             "params": {
@@ -242,6 +260,105 @@
                     }
                 }
             ]
+        },
+        {
+            "id": "74da80b3",
+            "name": "x",
+            "article_types": [
+                {
+                    "id": "original-article",
+                    "name": "Original Article",
+                    "rules": {}
+                },
+                {
+                    "id": "7e3d9905",
+                    "name": "Case Report",
+                    "rules": {
+                        "abstract": {
+                            "type": "general",
+                            "params": {
+                                "required_sections": [
+                                    "Background:",
+                                    "Case Report:",
+                                    "Materials and Methods:",
+                                    "Results:",
+                                    "Conclusions:"
+                                ]
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "id": "bbe71100",
+            "name": "GMIT",
+            "article_types": [
+                {
+                    "id": "original-article",
+                    "name": "Original Article",
+                    "rules": {}
+                },
+                {
+                    "id": "2a039266",
+                    "name": "Case Report",
+                    "rules": {
+                        "abstract": {
+                            "type": "general",
+                            "enabled": false
+                        },
+                        "subheadings": {
+                            "type": "general",
+                            "params": {
+                                "expected_headings": [
+                                    "Introduction",
+                                    "Case Report",
+                                    "Discussions"
+                                ]
+                            }
+                        },
+                        "online_access": {
+                            "type": "general",
+                            "params": {
+                                "expected_url": "https://journals.lww.com/gmit"
+                            }
+                        },
+                        "keywords": {
+                            "type": "custom",
+                            "instruction": "1. 每一個 Keyword 須按字母順序排列，\n第一個 keyword 首字母大寫或特殊名詞的首字母大寫\n2. Keywords 須包含 \"case report\"",
+                            "params": {
+                                "context_fields": [
+                                    "keywords"
+                                ]
+                            }
+                        },
+                        "title": {
+                            "type": "custom",
+                            "instruction": "1. Title Case\n2. 括號及介係詞小寫\n3. dash後第一個字母為小寫\n4. 冒號後第一個字母為大寫\n5. 要有寫“case”或“case report”\n",
+                            "params": {
+                                "context_fields": [
+                                    "titleName"
+                                ]
+                            }
+                        },
+                        "coi": {
+                            "type": "general",
+                            "params": {
+                                "board_url": "https://journals.lww.com/GMIT/pages/editorialboard.aspx"
+                            }
+                        },
+                        "irb": {
+                            "type": "general",
+                            "params": {
+                                "section_heading": "Declaration of patient consent"
+                            }
+                        }
+                    }
+                }
+            ]
         }
-    ]
+    ],
+    "global_settings": {
+        "api_key": "AIzaSyDg37ktkUdy2t-EVBzFBYczsdfgyzysct0"
+    }
 }
