@@ -9,7 +9,7 @@ function App() {
     return (
         <div className="light">
             <TooltipProvider>
-                <BrowserRouter>
+                <BrowserRouter basename="/proofreader">
                     <Routes>
                         <Route path="/" element={<MainPage />} />
                         <Route path="/settings" element={<SettingsPage />} />
