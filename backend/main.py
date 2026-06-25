@@ -11,10 +11,13 @@ load_dotenv()
 
 app = FastAPI(title="Academic Journal Proofreader API")
 
-# CORS — allow the Vite dev server
+# CORS — allow the Vite dev server locally; in production all traffic is
+# proxied through nginx (hub → frontend nginx → backend) so the backend is
+# never directly reachable from outside the Docker network.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://localhost:80", "http://localhost"],
+    allow_origin_regex=r"http://.*",  # any remote host in dev/staging
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
