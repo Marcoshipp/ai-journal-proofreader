@@ -25,15 +25,14 @@ def load_config() -> dict:
 def save_config(config: dict) -> None:
     """Save config to JSON file.
 
-    Uses a write-to-temp-then-atomic-rename pattern so that:
-    - Readers never see a truncated or partially-written file.
-    - A crash mid-write leaves the original file intact.
+    Serializes to memory first, then writes directly to the file.
+    This avoids replacing the file path, which fails with EBUSY (Device or resource busy)
+    in Docker environments when the config file is bind-mounted directly.
     """
     with _lock:
-        tmp = CONFIG_PATH.with_suffix(".tmp")
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(config, f, indent=4, ensure_ascii=False)
-        tmp.replace(CONFIG_PATH)  # atomic on Linux (POSIX rename syscall)
+        content = json.dumps(config, indent=4, ensure_ascii=False)
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            f.write(content)
 
 
 @contextlib.contextmanager
