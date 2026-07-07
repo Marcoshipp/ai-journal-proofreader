@@ -36,9 +36,9 @@ services:
       backend:
         condition: service_healthy
     networks:
-      - default
       - marco_network
+      - default
 
 networks:
-  external: true
-  name: marco_network
+  marco_network:
+    external: true
