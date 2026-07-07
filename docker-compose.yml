@@ -25,17 +25,18 @@ services:
 
   # ── Vite/React frontend served by Nginx ─────────────────────────────────────
   frontend:
-    container_name: proofreader_frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    restart: unless-stopped
+    container_name: proofreader_frontend
     ports:
       - "5173:80"
+    restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
     networks:
+      - default
       - marco_network
 
 networks:
