@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { FileUpload } from "@/components/FileUpload";
 import { ProgressTracker } from "@/components/ProgressTracker";
 import { ReportView } from "@/components/ReportView";
-import { ExportButton } from "@/components/ExportButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -13,7 +12,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { RotateCcw, FileSearch, Settings } from "lucide-react";
 import {
     fetchJournals,
@@ -41,6 +39,9 @@ export default function MainPage() {
     const [results, setResults] = useState<NonNullable<
         ProgressPayload["results"]
     > | null>(null);
+    const [paperTitle, setPaperTitle] = useState<string | undefined>(undefined);
+    const [journalName, setJournalName] = useState<string | undefined>(undefined);
+    const [articleTypeName, setArticleTypeName] = useState<string | undefined>(undefined);
     const [error, setError] = useState<string | null>(null);
     const cleanupRef = useRef<(() => void) | null>(null);
 
@@ -110,6 +111,9 @@ export default function MainPage() {
                     if (payload.status === "complete") {
                         setReportMarkdown(payload.report_markdown || "");
                         setResults(payload.results || null);
+                        setPaperTitle(payload.paper_title);
+                        setJournalName(payload.journal_name);
+                        setArticleTypeName(payload.article_type_name);
                         setPageState("report");
                     } else if (payload.status === "error") {
                         setError(payload.error || "Unknown error");
@@ -142,6 +146,9 @@ export default function MainPage() {
         setSteps([]);
         setReportMarkdown("");
         setResults(null);
+        setPaperTitle(undefined);
+        setJournalName(undefined);
+        setArticleTypeName(undefined);
         setError(null);
         setProcessStatus("processing");
     }, []);
@@ -314,17 +321,13 @@ export default function MainPage() {
 
                 {pageState === "report" && (
                     <div className="space-y-6 animate-in fade-in duration-500">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-xl font-bold tracking-tight">
-                                Validation Report
-                            </h2>
-                            <ExportButton markdown={reportMarkdown} />
-                        </div>
-                        <Separator />
                         {results && (
                             <ReportView
                                 markdown={reportMarkdown}
                                 results={results}
+                                paperTitle={paperTitle}
+                                journalName={journalName}
+                                articleTypeName={articleTypeName}
                             />
                         )}
                     </div>

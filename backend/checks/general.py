@@ -7,6 +7,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 import re
 import difflib
 import json
+import requests
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Any
 import string
@@ -404,6 +405,7 @@ def get_text_from_heading(md_name: str, heading: str) -> str:
         return ""
     
     target_level = len(match.group(1))
+    target_text = heading_stripped.lstrip("#").replace("**", "").replace("*", "").strip().lower()
 
     try:
         with open(md_name, "r", encoding="utf-8") as md:
@@ -422,8 +424,13 @@ def get_text_from_heading(md_name: str, heading: str) -> str:
                     extracted_lines.append(line)
                 
                 # Check if we found the start heading
-                if clean_line == heading_stripped:
-                    capture = True
+                curr_match = re.match(r"^(#+)", clean_line)
+                if curr_match:
+                    curr_level = len(curr_match.group(1))
+                    if curr_level == target_level:
+                        curr_text = clean_line.lstrip("#").replace("**", "").replace("*", "").strip().lower()
+                        if curr_text == target_text:
+                            capture = True
                     
         return "".join(extracted_lines)
     except FileNotFoundError:
@@ -449,15 +456,15 @@ def check_irb_and_pc(md_name: str, params: Dict[str, Any] = None) -> ValidationR
         
     prompt = IRB_PROMPT_TEMPLATE.format(manuscript_text=text)
 
-    response = client.models.generate_content(
-        model="gemini-flash-latest",
-        contents=prompt,
+    interaction = client.interactions.create(
+        model="gemini-3.1-flash-lite",
+        input=prompt,
     )
     status = "INFO"
     return ValidationResult(
         check_name="IRB & Patient Consent check",
         status=status,
-        messages=[response.text],
+        messages=[interaction.output_text],
     )
 
 
@@ -518,8 +525,39 @@ def check_authors(metadata: Dict[str, Any]) -> ValidationResult:
 
 
 def fetch_editors(url: str):
+    # Try requests first (highly reliable on Ovid, bypasses Cloudflare challenge page)
+    try:
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            )
+        }
+        r = requests.get(url, headers=headers, timeout=10)
+        if r.status_code == 200 and "M.D." in r.text:
+            matches = re.findall(r">([^<]*?M\.D\.[^<]*?)<", r.text)
+            names = []
+            for match in matches:
+                clean_match = match.replace("&amp;nbsp;", " ").replace("&nbsp;", " ").strip()
+                if ", M.D." in clean_match:
+                    name = clean_match.split(',')[0].strip()
+                    name = re.sub(r"^[^\w\s\-\u00C0-\u017F]+", "", name).strip()
+                    name = name.replace("<strong>", "").replace("</strong>", "")
+                    name = name.replace("<b>", "").replace("</b>", "").strip()
+                    if name and not name.isupper() and len(name.split()) >= 2:
+                        names.append(name)
+            if names:
+                return set(names)
+    except Exception as e:
+        print(f"requests fetch failed: {e}")
+
+    # Fallback to Playwright
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(
+            headless=True,
+            args=["--disable-blink-features=AutomationControlled"]
+        )
         real_user_agent = (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -527,15 +565,22 @@ def fetch_editors(url: str):
         )
         context = browser.new_context(user_agent=real_user_agent)
         page = context.new_page()
-        page.goto(url, wait_until="networkidle")
-        text = page.locator("#wpHTMLContentEditor").inner_text()
+        # Use domcontentloaded and shorter timeout to avoid hanging on tracking scripts
+        page.goto(url, wait_until="domcontentloaded", timeout=15000)
+        try:
+            page.wait_for_selector("#wpHTMLContentEditor", timeout=5000)
+            text = page.locator("#wpHTMLContentEditor").inner_text()
+        except Exception:
+            text = page.locator("body").inner_text()
+
         lines = text.split('\n')
         names = []
-
         for line in lines:
-            if ", M.D." in line:
-                name = line.split(',')[0].strip()
-                if name and not name.isupper(): 
+            clean_line = line.strip()
+            if ", M.D." in clean_line:
+                name = clean_line.split(',')[0].strip()
+                name = re.sub(r"^[^\w\s\-\u00C0-\u017F]+", "", name).strip()
+                if name and not name.isupper() and len(name.split()) >= 2:
                     names.append(name)
         browser.close()
         return set(names)
@@ -1005,11 +1050,11 @@ BACK_MATTER_SECTIONS = [
 
 
 def get_text_from_bold_section(md_name: str, section_name: str) -> str | None:
-    """Return the text that follows a **bold** section label in the markdown.
+    """Return the text that follows a bold or heading section label in the markdown.
 
-    Scans line-by-line for a line whose de-bolded text starts with
+    Scans line-by-line for a line whose cleaned text starts with
     *section_name* (case-insensitive). Captures subsequent lines until it
-    hits the next bold-only label (``**Something**``) or a ``##`` heading.
+    hits the next bold-only label (``**Something**``) or a heading.
     Returns ``None`` if the section label is never found.
     """
     lines = Path(md_name).read_text(encoding="utf-8").splitlines()
@@ -1018,8 +1063,8 @@ def get_text_from_bold_section(md_name: str, section_name: str) -> str | None:
 
     for line in lines:
         stripped = line.strip()
-        # De-bold the line for comparison
-        clean = stripped.replace("**", "").strip()
+        # De-bold and strip heading prefixes for comparison
+        clean = stripped.lstrip("#").replace("**", "").strip()
 
         # Detect start of our target section
         if not capturing:
@@ -1037,9 +1082,9 @@ def get_text_from_bold_section(md_name: str, section_name: str) -> str | None:
 
 
 def _find_bold_section_line(lines: list[str], section_name: str) -> int | None:
-    """Return the 0-based line index of a bold section label, or None."""
+    """Return the 0-based line index of a bold section label or heading, or None."""
     for i, line in enumerate(lines):
-        clean = line.strip().replace("**", "").strip()
+        clean = line.strip().lstrip("#").replace("**", "").strip()
         if clean.lower().startswith(section_name.lower()):
             return i
     return None

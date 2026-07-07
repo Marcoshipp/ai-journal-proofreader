@@ -2,10 +2,10 @@ from pathlib import Path
 import pymupdf4llm
 import re
 import json
+import base64
 from typing import List, Dict, Any
 from dotenv import load_dotenv
 from google import genai
-from google.genai import types
 from prompts.prompt import JSON_PROMPT_TEMPLATE
 
 load_dotenv()
@@ -72,7 +72,7 @@ def clean_markdown_lines(lines: List[str]) -> List[str]:
     return cleaned_lines
 
 
-def pdf_to_markdown(pdf_path: str, md_name: str):
+def pdf_to_markdown(pdf_path: str, md_name: str, api_key: str = None):
     assert pdf_path, f"PDF file: {pdf_path} not available"
     md = pymupdf4llm.to_markdown(pdf_path)
     lines = md.splitlines()
@@ -80,8 +80,8 @@ def pdf_to_markdown(pdf_path: str, md_name: str):
     cleaned_list = clean_markdown_lines(lines)
 
     md_cleaned = "\n".join(cleaned_list)
-    with open(md_name, "w", encoding="utf-8") as md:
-        md.write(md_cleaned)
+    with open(md_name, "w", encoding="utf-8") as f:
+        f.write(md_cleaned)
 
 
 def extract_subheadings(md_name: str) -> List[str]:
@@ -146,23 +146,20 @@ def generate_metadata_json(
 
     # Upload the PDF via the Files API so Gemini can inspect its layout
     # uploaded_file = client.files.upload(file=pdf_path)
-    response = client.models.generate_content(
-        model="gemini-flash-latest",
-        contents=[
-            types.Part.from_bytes(
-                data=path.read_bytes(),
-                mime_type="application/pdf",
-            ),
-            JSON_PROMPT_TEMPLATE,
+    interaction = client.interactions.create(
+        model="gemini-3.1-flash-lite",
+        input=[
+            {
+                "type": "document",
+                "mime_type": "application/pdf",
+                "data": base64.b64encode(path.read_bytes()).decode("utf-8"),
+            },
+            {"type": "text", "text": JSON_PROMPT_TEMPLATE},
         ],
     )
-    # response = client.models.generate_content(
-    #     model="gemini-flash-latest",
-    #     contents=[uploaded_file, JSON_PROMPT_TEMPLATE],
-    # )
 
     # Strip markdown code fences if Gemini wraps the JSON in ```json ... ```
-    raw_text = response.text.strip()
+    raw_text = interaction.output_text.strip()
     if raw_text.startswith("```"):
         raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text)
         raw_text = re.sub(r"```\s*$", "", raw_text)

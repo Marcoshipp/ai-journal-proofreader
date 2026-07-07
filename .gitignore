@@ -47,6 +47,7 @@ coverage.xml
 backend/uploads/
 backend/test.md
 backend/report.md
+backend/config.json
 backend/config.json.bak
 /source_docs/
 

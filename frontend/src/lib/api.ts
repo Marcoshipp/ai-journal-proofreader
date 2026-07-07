@@ -190,6 +190,9 @@ export interface ProgressPayload {
         messages: string[];
         details: Record<string, unknown>;
     }>;
+    paper_title?: string;
+    journal_name?: string;
+    article_type_name?: string;
     error?: string;
 }
 

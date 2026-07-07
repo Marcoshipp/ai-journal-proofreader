@@ -174,11 +174,11 @@ REASON: one-sentence explanation
             client = genai.Client(api_key=api_key)
         else:
             client = genai.Client()
-        response = client.models.generate_content(
-            model="gemini-flash-lite-latest",
-            contents=prompt,
+        interaction = client.interactions.create(
+            model="gemini-3.1-flash-lite",
+            input=prompt,
         )
-        text = response.text.strip()
+        text = interaction.output_text.strip()
         lines = {}
         for line in text.splitlines():
             if ":" in line:
@@ -201,9 +201,25 @@ REASON: one-sentence explanation
         )
 
 
-def _generate_report_markdown(results: List[ValidationResult]) -> str:
+def _generate_report_markdown(
+    results: List[ValidationResult],
+    paper_title: Optional[str] = None,
+    journal_name: Optional[str] = None,
+    article_type_name: Optional[str] = None,
+) -> str:
     """Generate a markdown report from validation results."""
     lines = ["# Validation Report\n"]
+    
+    if paper_title or journal_name or article_type_name:
+        lines.append("## General Information")
+        if paper_title:
+            lines.append(f"- **Paper Title**: {paper_title}")
+        if journal_name:
+            lines.append(f"- **Journal**: {journal_name}")
+        if article_type_name:
+            lines.append(f"- **Article Type**: {article_type_name}")
+        lines.append("")
+
     for res in results:
         lines.append(f"## {res.check_name}")
         if res.status == "SUCCESS":
@@ -241,7 +257,7 @@ async def _process_pdf(job_id: str):
 
         # Step 2: Convert PDF to markdown
         job["steps"].append({"key": "converting_markdown", "status": "running", "label": "Converting PDF to markdown..."})
-        await asyncio.to_thread(pdf_to_markdown, pdf_path, md_path)
+        await asyncio.to_thread(pdf_to_markdown, pdf_path, md_path, api_key)
         job["steps"][-1]["status"] = "done"
 
         # Step 3: Populate subheadings
@@ -251,6 +267,10 @@ async def _process_pdf(job_id: str):
         with open(json_path, "r", encoding="utf-8") as f:
             metadata = json.load(f)
         job["steps"][-1]["status"] = "done"
+        
+        # Get paper title from metadata
+        paper_title = metadata.get("titleName", "Unknown Title")
+        job["paper_title"] = paper_title
 
         # Step 4: Determine which checks to run
         # Find journal and article type rules
@@ -268,27 +288,51 @@ async def _process_pdf(job_id: str):
             if not article_type:
                 article_type = journal["article_types"][0]
 
-        check_sections = config.get("check_sections", [])
-        results: List[ValidationResult] = []
+        journal_name = journal["name"] if journal else "Unknown Journal"
+        article_type_name = article_type["name"] if article_type else "Unknown Article Type"
+        
+        job["journal_name"] = journal_name
+        job["article_type_name"] = article_type_name
 
+        check_sections = config.get("check_sections", [])
+        
         # Compute effective rules once (auto-defaults + config defaults + article overrides)
         effective_rules = get_effective_rules(config, article_type)
 
-        # Run configured checks
+        # Pre-populate all steps in job["steps"] so the frontend gets them immediately
+        step_indices = {}
         for section in check_sections:
+            key = section["key"]
+            display = section["display_name"]
+            
+            rule = effective_rules.get(key, {})
+            is_enabled = rule.get("enabled", True)
+            
+            step = {
+                "key": f"check_{key}",
+                "status": "running" if is_enabled else "skipped",
+                "label": f"Checking {display}...",
+            }
+            if not is_enabled:
+                skipped_result = ValidationResult(
+                    check_name=display,
+                    status="INFO",
+                    messages=["[SKIPPED] This check is disabled in settings."],
+                )
+                step["result"] = skipped_result.to_dict()
+                
+            job["steps"].append(step)
+            step_indices[key] = len(job["steps"]) - 1
+
+        # Define individual task worker for parallel execution
+        async def execute_check(section):
             key = section["key"]
             display = section["display_name"]
 
             rule = effective_rules.get(key, {})
             rule_type = rule.get("type", "general")
             is_enabled = rule.get("enabled", True)
-            params = rule.get("params", {})
-
-            job["steps"].append({
-                "key": f"check_{key}",
-                "status": "running",
-                "label": f"Checking {display}...",
-            })
+            params = rule.get("params", {}).copy()
 
             if not is_enabled:
                 skipped_result = ValidationResult(
@@ -296,38 +340,58 @@ async def _process_pdf(job_id: str):
                     status="INFO",
                     messages=["[SKIPPED] This check is disabled in settings."],
                 )
-                results.append(skipped_result)
-                job["steps"][-1]["status"] = "skipped"
-                job["steps"][-1]["result"] = skipped_result.to_dict()
-                continue
+                return key, skipped_result
 
             if api_key:
                 params["_api_key"] = api_key
 
-            if rule_type == "general":
-                result = await asyncio.to_thread(
-                    _run_builtin_check, key, metadata, md_path, params
-                )
-            elif rule_type == "custom":
-                instruction = rule.get("instruction", "")
-                context_fields = params.get("context_fields", list(metadata.keys())[:5])
-                result = await asyncio.to_thread(
-                    run_llm_check,
-                    display, instruction, context_fields, metadata, md_path, effective_rules, api_key
-                )
-            else:
+            try:
+                if rule_type == "general":
+                    result = await asyncio.to_thread(
+                        _run_builtin_check, key, metadata, md_path, params
+                    )
+                elif rule_type == "custom":
+                    instruction = rule.get("instruction", "")
+                    context_fields = params.get("context_fields", list(metadata.keys())[:5])
+                    result = await asyncio.to_thread(
+                        run_llm_check,
+                        display, instruction, context_fields, metadata, md_path, effective_rules, api_key
+                    )
+                else:
+                    result = ValidationResult(
+                        check_name=display,
+                        status="INFO",
+                        messages=[f"[INFO] Unknown rule type '{rule_type}' — skipped."],
+                    )
+                return key, result
+            except Exception as e:
                 result = ValidationResult(
                     check_name=display,
-                    status="INFO",
-                    messages=[f"[INFO] Unknown rule type '{rule_type}' — skipped."],
+                    status="WARNING",
+                    messages=[f"[WARNING] Check failed to run: {e}"],
                 )
+                return key, result
 
+        # Gather tasks and run them concurrently
+        tasks = [execute_check(section) for section in check_sections]
+        completed_tasks = await asyncio.gather(*tasks)
+
+        # Collect results and update step statuses in the correct order
+        results = []
+        for key, result in completed_tasks:
             results.append(result)
-            job["steps"][-1]["status"] = "done"
-            job["steps"][-1]["result"] = result.to_dict()
+            idx = step_indices[key]
+            if job["steps"][idx]["status"] == "running":
+                job["steps"][idx]["status"] = "done"
+                job["steps"][idx]["result"] = result.to_dict()
 
         # Generate markdown report
-        report_md = _generate_report_markdown(results)
+        report_md = _generate_report_markdown(
+            results,
+            paper_title=job.get("paper_title"),
+            journal_name=job.get("journal_name"),
+            article_type_name=job.get("article_type_name"),
+        )
         job["report_markdown"] = report_md
         job["metadata"] = metadata
         job["results"] = [r.to_dict() for r in results]
@@ -410,6 +474,9 @@ async def validate_progress(job_id: str):
                 payload["report_markdown"] = job["report_markdown"]
                 payload["metadata"] = job["metadata"]
                 payload["results"] = job["results"]
+                payload["paper_title"] = job.get("paper_title")
+                payload["journal_name"] = job.get("journal_name")
+                payload["article_type_name"] = job.get("article_type_name")
                 yield f"data: {json.dumps(payload)}\n\n"
                 break
             elif job["status"] == "error":
@@ -445,4 +512,7 @@ async def validate_result(job_id: str):
         "report_markdown": job["report_markdown"],
         "metadata": job["metadata"],
         "results": job["results"],
+        "paper_title": job.get("paper_title"),
+        "journal_name": job.get("journal_name"),
+        "article_type_name": job.get("article_type_name"),
     }
