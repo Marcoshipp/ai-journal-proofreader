@@ -262,35 +262,6 @@
             ]
         },
         {
-            "id": "74da80b3",
-            "name": "x",
-            "article_types": [
-                {
-                    "id": "original-article",
-                    "name": "Original Article",
-                    "rules": {}
-                },
-                {
-                    "id": "7e3d9905",
-                    "name": "Case Report",
-                    "rules": {
-                        "abstract": {
-                            "type": "general",
-                            "params": {
-                                "required_sections": [
-                                    "Background:",
-                                    "Case Report:",
-                                    "Materials and Methods:",
-                                    "Results:",
-                                    "Conclusions:"
-                                ]
-                            }
-                        }
-                    }
-                }
-            ]
-        },
-        {
             "id": "bbe71100",
             "name": "GMIT",
             "article_types": [
@@ -359,6 +330,6 @@
         }
     ],
     "global_settings": {
-        "api_key": ""
+        "api_key": "AIzaSyDa4I99aQWp_CpSjVufauR5_1YjhtaCDnQ"
     }
 }
