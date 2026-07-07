@@ -6,14 +6,14 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
+    ports:
+      - "8000:8000"
     env_file:
       - ./backend/.env
     volumes:
       # Persist uploaded files and config across container restarts
       - ./backend/uploads:/app/uploads
       - ./backend/config.json:/app/config.json
-    expose:
-      - "8000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
@@ -21,7 +21,7 @@ services:
       retries: 3
       start_period: 30s
     networks:
-      - app_network
+      - marco_network
 
   # ── Vite/React frontend served by Nginx ─────────────────────────────────────
   frontend:
@@ -30,15 +30,14 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     restart: unless-stopped
-    expose:
-      - "80"
+    ports:
+      - "5173:80"
     depends_on:
       backend:
         condition: service_healthy
     networks:
-      - app_network
+      - marco_network
 
 networks:
-  app_network:
-    external: true
-    name: marco_network
+  external: true
+  name: marco_network
