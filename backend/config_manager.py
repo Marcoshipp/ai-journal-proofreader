@@ -1,3 +1,4 @@
+import contextlib
 import json
 import threading
 from pathlib import Path
@@ -7,7 +8,9 @@ CONFIG_PATH = Path(__file__).parent / "config.json"
 # Module-level lock: all reads and writes must hold this to prevent
 # race conditions from FastAPI's threadpool executing sync handlers
 # concurrently (even with a single uvicorn worker).
-_lock = threading.Lock()
+# We use a reentrant lock (RLock) to allow recursive acquisition
+# within the edit_config context manager.
+_lock = threading.RLock()
 
 
 def load_config() -> dict:
@@ -33,6 +36,15 @@ def save_config(config: dict) -> None:
         tmp.replace(CONFIG_PATH)  # atomic on Linux (POSIX rename syscall)
 
 
+@contextlib.contextmanager
+def edit_config():
+    """Context manager to safely load, modify, and automatically save config under a lock."""
+    with _lock:
+        config = load_config()
+        yield config
+        save_config(config)
+
+
 # ── Check section registry ───────────────────────────────────────
 # Programmer-extensible: add new check section keys here and they
 # appear in the config matrix automatically.
@@ -49,10 +61,9 @@ DEFAULT_CHECK_SECTIONS = [
 
 def ensure_config() -> dict:
     """Return existing config, or create a default one if missing."""
-    config = load_config()
-    if not config.get("check_sections"):
-        config["check_sections"] = DEFAULT_CHECK_SECTIONS
-    if not config.get("journals"):
-        config["journals"] = []
-    save_config(config)
+    with edit_config() as config:
+        if not config.get("check_sections"):
+            config["check_sections"] = DEFAULT_CHECK_SECTIONS
+        if not config.get("journals"):
+            config["journals"] = []
     return config
